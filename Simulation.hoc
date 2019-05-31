@@ -1,0 +1,107 @@
+//
+// Simulation.hoc - Main simulation file
+//
+// The simulation mode will generate some activity traces.
+// Warning: this will take a LOT of time on a regular computer and more than 1GB of disk space.
+// (see Recording.hoc for a description of the recording file format)
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2009
+//
+
+// NEURON parameters
+steps_per_ms = 10
+dt = 0.1	
+tstart = 0
+tstop = 10000
+runStopAt = tstop
+v_init = -70
+celsius = 34.5
+
+// Retinothalamic topology
+RetinalDivergenceCount = 30
+RelayConvergenceCount = 1
+RetinalCellCount = 1
+RelayCellCount = 30
+
+// TC cells
+TC_Grest = 8.34 // nS
+TC_Vrest = -74.31 // mV
+TC_Gexc = 0 // excitatory conductance mean amplitude
+TC_Ginh = 0 // inhibitory conductance mean amplitude
+TC_Sexc = 0 // excitatory conductance variation ratio
+TC_Sinh = 0 // inhibitory conductance variation ratio
+
+RelayAMPAWeight = 12.5 // nS
+FeedbackNoiseEnabled = 1
+FeedbackNoiseInterCorrelation = 0
+
+// Cortical cell (no synaptic noise)
+C_Grest = 33.4 // nS
+C_Vrest = -70.57 // mV
+C_Gexc = 0
+C_Ginh = 0
+C_Sexc = 0
+C_Sinh = 0
+
+CorticalNoiseEnabled = 0
+CorticalAMPAWeight = 7 * 30 / RelayCellCount // optimal rule: 7 nS for 30 TC cells and 2.33 nS for 90 TC cells
+
+// Simulation variables and function
+strdef RecordingFileName
+BatchCount = 0
+
+proc RunSimulation() {
+	BatchCount = BatchCount + 1
+	sprint(RecordingFileName, "Activity_traces-TC_Gexc=%.02f-TC_Ginh=%.02f-TC_Sexc=%.02f-TC_Sinh=%.02f-Cnoise=%.02f.dat", TC_Gexc, TC_Ginh, TC_Sexc, TC_Sinh, FeedbackNoiseInterCorrelation)
+	printf("run(%d): %s\n", BatchCount, RecordingFileName)
+
+	FeedbackNoiseGeMean = TC_Grest * TC_Gexc
+	FeedbackNoiseGeSigma = FeedbackNoiseGeMean * TC_Sexc
+	FeedbackNoiseGiMean = TC_Grest * TC_Ginh
+	FeedbackNoiseGiSigma = FeedbackNoiseGiMean * TC_Sinh
+	CorticalNoiseGeMean = C_Grest * C_Gexc
+	CorticalNoiseGeSigma = CorticalNoiseGeMean * C_Sexc
+	CorticalNoiseGiMean = C_Grest * C_Ginh
+	CorticalNoiseGiSigma = CorticalNoiseGiMean * C_Sinh
+
+	CreateGeometry()
+	UpdateParameters()
+	StartRecording(RecordingFileName)
+	run()	
+	StopRecording()
+	DestroyGeometry()
+	UpdateParameters()
+}
+
+// Explore synaptic noise mean amplitude
+TC_Sexc = 0.2
+TC_Sinh = 0.2
+FeedbackNoiseInterCorrelation = 0
+
+for (TC_Gexc = 0; TC_Gexc <= 3; TC_Gexc = TC_Gexc + 0.3) {
+	for (TC_Ginh = 0; TC_Ginh <= 3; TC_Ginh = TC_Ginh + 0.3) {
+		RunSimulation()
+	}
+}
+
+// Explore synaptic noise variation ratio
+TC_Gexc = 1.5
+TC_Ginh = 1.0
+FeedbackNoiseInterCorrelation = 0
+
+for (TC_Sexc = 0; TC_Sexc <= 1; TC_Sexc = TC_Sexc + 0.1) {
+	for (TC_Sinh = 0; TC_Sinh <= 1; TC_Sinh = TC_Sinh + 0.1) {
+		RunSimulation()
+	}
+}
+
+// Explore synaptic noise correlation across TC cells
+TC_Gexc = 1.5
+TC_Ginh = 1.0
+TC_Sexc = 0.2
+TC_Sinh = 0.2
+
+for (FeedbackNoiseInterCorrelation = 0; FeedbackNoiseInterCorrelation <= 1; FeedbackNoiseInterCorrelation = FeedbackNoiseInterCorrelation + 0.1) {
+	RunSimulation()
+}

@@ -1,0 +1,61 @@
+//
+// GUI.hoc - Graphical user interface initialization
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2013
+//
+
+objref GUIBox, GUIDeck
+
+proc CleanAndExit() {
+	StopRecording()
+	DestroyGeometry()
+	quit()
+}
+
+proc BuildGUI() {
+	nrnmainmenu()
+	nrncontrolmenu()
+
+	GUIBox = new HBox()
+	GUIBox.intercept(1)
+
+	xpanel("main menu")
+	xlabel("========================")
+	xlabel("TC CONVERGENCE INTERFACE")
+	xlabel("========================")
+	xlabel("")
+	xbutton("geometry", "GUIDeck.flip_to(0)")
+	xbutton("inputs", "GUIDeck.flip_to(1)")
+	xbutton("noise", "GUIDeck.flip_to(2)")
+	xbutton("recording", "GUIDeck.flip_to(3)")
+	xlabel("==============================")
+	xbutton("exit", "CleanAndExit()")
+	xlabel("")
+	xpanel()
+
+	GUIDeck = new Deck()
+	GUIDeck.intercept(1)
+
+	xpanel("geometry")
+	GeometryGUI()
+	xpanel()
+
+	xpanel("inputs")
+	InputsGUI()
+	xpanel()
+
+	xpanel("noise")
+	NoiseGUI()
+	xpanel()
+
+	xpanel("recording")
+	RecordingGUI()
+	xpanel()
+
+	GUIDeck.intercept(0)
+	GUIDeck.map("gui deck")
+	GUIDeck.flip_to(0)
+	GUIBox.intercept(0)
+	GUIBox.map("gui box")
+}

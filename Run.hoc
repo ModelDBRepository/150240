@@ -1,0 +1,51 @@
+// 
+// Run.hoc - Main program file
+//
+// To start the demo mode:
+// Set "Simulation" to 0 (see below)
+// Launch with "nrniv Run.hoc -"
+//
+// To start the simulation mode:
+// Set "Simulation" to 1 (see below)
+// Launch with "nrniv Run.hoc"
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2013
+//
+
+Simulation = 0
+
+//
+// Currently in demo mode
+//
+
+{ load_file("stdgui.hoc") }
+{ use_mcell_ran4(1) }
+
+proc execute_file() {
+	if (xopen($s1) == 1) {
+		print $s1, ": ok"
+	} else {
+		print $s1, ": failed"
+	}
+}
+
+print ""
+print "========================================================"
+print "NEURON interface for thalamocortical convergence studies"
+print "Sébastien Béhuret, UNIC/CNRS Paris, 2013"
+print "behuret@unic.cnrs-gif.fr"
+print "========================================================"
+print ""
+
+execute_file("Templates.hoc")
+execute_file("Geometry.hoc")
+execute_file("Recording.hoc")
+execute_file("GUI.hoc")
+
+if (Simulation == 0) {
+	BuildGUI()
+	execute_file("Demo.hoc")
+} else {
+	execute_file("Simulation.hoc")
+}

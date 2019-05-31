@@ -1,0 +1,106 @@
+//
+// Templates.hoc - Cortical pyramidal and thalamocortical relay cell model templates
+//
+// From Alain Destexhe, original templates can be found in
+// http://cns.iaf.cnrs-gif.fr/files/CORTEX.ZIP
+// and
+// http://cns.iaf.cnrs-gif.fr/files/DENDTC.ZIP
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2009
+//
+
+begintemplate PyramidalCell
+	public Soma
+	create Soma
+
+	proc init() { local v_potassium, v_sodium
+		v_potassium = -100		// potassium reversal potential 
+		v_sodium = 50			// sodium reversal potential 
+
+		create Soma
+
+		Soma {
+			Ra = 100		// geometry 
+			nseg = 1
+			diam = 96
+			L = 96			// so that area is about 29000 um2
+			cm = 1
+
+			insert pas		// leak current 
+			e_pas = -70
+			g_pas = 0.0001		// Rin = 34 Meg
+
+			// conversion with McC units: 
+			// g(S/cm2) = g(nS)*1e-9/29000e-8
+			//	    = g(nS) * 3.45e-6
+
+			insert hh2		// Hodgin-Huxley INa and IK 
+			ek = v_potassium
+			ena = v_sodium
+			vtraub_hh2 = -55	// Resting Vm, BJ was -55
+			gnabar_hh2 = 0.05	// McCormick=15 muS, thal was 0.09
+			gkbar_hh2 = 0.005	// spike duration of pyr cells
+
+			insert im		// M current 
+			taumax_im = 1000
+			gkbar_im = 7e-5		// Diego's IM (copyrighted)
+
+		//	insert iahp
+		//	alpha_iahp = 1.25e9
+		//	beta_iahp = 0.001
+		//	gkbar_iahp = 1.7e-5	// McCormick=5 nS
+
+		//	insert cad		// calcium decay
+		//	depth_cad = 1		// McCormick= 0.1 um
+		//	taur_cad = 5		// McCormick=1 ms !!!
+		//	cainf_cad = 2.4e-4	// McCormick=0
+		//	kt_cad = 0		// no pump
+		}
+	}
+endtemplate PyramidalCell
+
+begintemplate RelayCell
+	public Soma
+	create Soma
+
+	proc init() {
+  		create Soma
+
+  		Soma {
+			nseg = 1
+			diam = 76.58
+			L = 100
+			cm = 0.88
+			Ra = 173
+
+			insert pas
+			g_pas = 3.79e-5
+			e_pas = -76.5
+
+			insert hh2
+			ena = 50
+			ek = -100
+			vtraub_hh2 = -52
+			gnabar_hh2 = 0.01
+			gkbar_hh2 = 0.01
+
+			insert itGHK
+			cai = 2.4e-4
+			cao = 2
+			eca = 120
+			shift_itGHK = -1
+			gcabar_itGHK = 0.0002
+			qm_itGHK = 2.5
+			qh_itGHK = 2.5
+			pcabar_itGHK = 8e-5
+
+			insert cad
+			depth_cad = 0.1
+			kt_cad = 0
+			kd_cad = 1e-4
+			taur_cad = 5
+			cainf_cad = 2.4e-4
+		}
+	}
+endtemplate RelayCell

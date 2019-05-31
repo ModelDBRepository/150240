@@ -1,0 +1,599 @@
+//
+// Geometry.hoc - Retino-thalamo-cortical core circuit implementation
+//
+//
+// This file controls the topology of the circuit.
+// All parameters listed below can be edited here and
+// some of them can directly be changed from the GUI.
+// (Examples of circuit construction are provided in Demo.hoc and Simulation.hoc)
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2009
+//
+
+// NEURON core parameters
+steps_per_ms = 10
+dt = 0.1	
+tstart = 0
+tstop = 1000
+runStopAt = tstop
+v_init = -70
+celsius = 34.5
+
+RelayRandomization = 0 // scalar [0..1] (cellular heterogeneity)
+
+RetinalCellFrequency = 30 // Hz (retinal cell input frequency)
+RetinalCellPhase = 0 // ms (retinal cell input frequency)
+RetinalCellNoise = 1 // scalar [0..1] (must be set to 1 for a gamma distribution)
+RetinalCellGamma = 3 // no unit (shape parameter of the gamma distribution)
+RetinalCellInterCorrelation = 0 // scalar [0..1] (retinal synchronization, will only work if RetinalCellNoise <> 1 or if RetinalCellGamma = 3)
+RetinalCellInterCorrelationCount = 512 // no unit
+RetinalCellExpDelay = 0 // ms
+RetinalCellBaseDelay = 0 // ms
+
+RelayAMPAWeight = 12.5 // nS (TC AMPA synaptic weight)
+RelayAMPATau = 1 // ms (TC AMPA time to peak amplitude)
+RelayAMPAERev = 0 // mV (TC AMPA reversal potential)
+RelayAMPADeadTime = 1 // ms
+
+RelayGABAAWeight = 0 // nS
+RelayGABAATau = 2 // ms
+RelayGABAAERev = -75 // mV
+RelayGABAADeadTime = 1 // ms
+RelayGABAABaseDelay = 0 // ms
+
+RelayCellBaseDelay = 0 // ms
+RelayCellExpDelay = 0 // ms
+
+CorticalAMPAWeight = 7 // nS (Cortical AMPA synaptic weight, adapted to 30 relay cell version of the circuit)
+CorticalAMPATau = RelayAMPATau // ms (Cortical AMPA time to peak amplitude)
+CorticalAMPAERev = RelayAMPAERev // mV (Cortical AMPA reversal potential)
+CorticalAMPADeadTime = RelayAMPADeadTime // ms
+
+CorticalGABAAWeight = 0 // nS (FFI synaptic weight)
+CorticalGABAATau = RelayGABAATau // ms
+CorticalGABAAERev = RelayGABAAERev // mV
+CorticalGABAADeadTime = RelayGABAADeadTime // ms
+CorticalGABAABaseDelay = 0 // ms (FFI time lag)
+
+RelayConstantCurrentEnabled = 0 // boolean (0 or 1)
+RelayConstantCurrentAmplitude = 0 // nA
+
+RelaySineWaveCurrentEnabled = 0 // boolean (0 or 1)
+RelaySineWaveCurrentAmplitude = 0.1 // nA
+RelaySineWaveCurrentFrequency = 15 // Hz
+RelaySineWaveCurrentPhase = 0 // ms
+RelaySineWaveCurrentOffset = 0 // nA
+RelaySineWaveCurrentInPhaseCount = 512 // no unit
+
+FeedbackNoiseEnabled = 0 // boolean (0 or 1) (enable the synaptic bombardment in TC cells)
+FeedbackNoiseGeRev = 0 // mV (excitatory component reversal potential)
+FeedbackNoiseGeMean = 12 // nS (excitatory component mean)
+FeedbackNoiseGeSigma = 3.0 // nS (excitatory component SD)
+FeedbackNoiseGeTau = 2.7 // ms (excitatory component time constant)
+FeedbackNoiseGiRev = -75 // mV (inhibitory component reversal potential)
+FeedbackNoiseGiMean = 57 // nS (inhibitory component mean)
+FeedbackNoiseGiSigma = 6.6 // nS (inhibitory component SD)
+FeedbackNoiseGiTau = 10.5 // ms (inhibitory component time constant)
+FeedbackNoiseGeGiCorrelation = 0 // scalar [0..1] (temporal correlation of excitatory and inhibitory components in single TC cell)
+FeedbackNoiseGeGiPhase = 0 // ms // (inhibitory component time lag relative to excitatory component; see FeedbackNoiseGeGiCorrelation)
+FeedbackNoiseInterCorrelation = 0 // scalar [0..1] (temporal correlation of synaptic inputs across TC cells)
+FeedbackNoiseInterCorrelationCount = 512 // no unit
+
+CorticalNoiseEnabled = 0 // boolean (0 or 1) (enable the synaptic bombardment in the cortical cell)
+CorticalNoiseGeRev = 0 // mV
+CorticalNoiseGeMean = 12 // nS
+CorticalNoiseGeSigma = 3.0 // nS
+CorticalNoiseGeTau = 2.7 // ms
+CorticalNoiseGiRev = -75 // mV
+CorticalNoiseGiMean = 57 // nS
+CorticalNoiseGiSigma = 6.6 // nS
+CorticalNoiseGiTau = 10.5 // ms
+CorticalNoiseGeGiCorrelation = 0 // scalar [0..1]
+CorticalNoiseGeGiPhase = 0 // ms
+CorticalNoiseInterCorrelation = 0 // scalar [0..1]
+
+SimulationSeed = 0 // no unit
+RandomizeSeed = 0 // boolean (0 or 1)
+
+RetinalDivergenceMax = 512 // no unit
+RetinalDivergenceCount = 4 // no unit
+
+RelayConvergenceMax = 512 // no unit
+RelayConvergenceCount = 2 // no unit
+
+RelayWeightSpread = 0.75  // scalar [0.5..1]
+
+RetinalCellMax = 512 // no unit
+RetinalCellCount = 15 // no unit
+
+RelayCellMax = 512 // no unit
+RelayCellCount = 30 // no unit
+
+IgnoreUnbalancedTopology = 0 // boolean (0 or 1)
+
+// ==========================
+// do not edit past this line
+// ==========================
+
+objref RetinalCells[RetinalCellMax], RelayCells[RelayCellMax], CorticalCell, Randomizer
+objref RelayAMPA[RelayCellMax][RelayConvergenceMax], RelayGABAA[RelayCellMax][RelayConvergenceMax], CorticalAMPA[RelayCellMax], CorticalGABAA[RelayCellMax]
+objref RelayConstantCurrent[RelayCellMax], RelaySineWaveCurrent[RelayCellMax], FeedbackNoise[RelayCellMax], CorticalNoise
+double RetinogeniculateTopology[RetinalCellMax][RelayConvergenceMax]
+
+GeometryCreated = 0
+
+objref SeedRandomizer
+SeedRandomizer = new Random(0)
+{ SeedRandomizer.uniform(0, 1) }
+
+objref ConnectivityRandomizer, RelayRandomizer
+
+NullVariable = 0
+objref KVector
+KVector = new Vector(RetinalCellMax)
+
+proc ResetKVector() {
+	for ind = 0, RetinalCellCount - 1 {
+		KVector.x[ind] = -1
+	}
+}
+
+proc InsertKVector() {
+	if ($1 == -1) {
+		printf("!InsertKVector()")
+		quit()
+	}
+
+	for ind = 0, RetinalCellCount - 1 {
+		if (KVector.x[ind] == -1) {
+			KVector.x[ind] = $1
+			return
+		}
+	}
+
+	printf("!InsertKVector()")
+	quit()
+}
+
+func FindKvector() {
+	for ind = 0, RetinalCellCount - 1 {
+		if (KVector.x[ind] == $1) {
+			return 1
+		}
+	}
+
+	return 0
+}
+
+proc DestroyGeometry() {
+	if (GeometryCreated == 1) {
+		objref RetinalCells[RetinalCellMax], RelayCells[RelayCellMax], CorticalCell, Randomizer
+		objref RelayAMPA[RelayCellMax][RelayConvergenceMax], RelayGABAA[RelayCellMax][RelayConvergenceMax], CorticalAMPA[RelayCellMax], CorticalGABAA[RelayCellMax]
+		objref RelayConstantCurrent[RelayCellMax], RelaySineWaveCurrent[RelayCellMax], FeedbackNoise[RelayCellMax], CorticalNoise
+		double RetinogeniculateTopology[RetinalCellMax][RelayConvergenceMax]
+
+		GeometryCreated = 0
+	}
+}
+
+// this important function sets the cellular compartments and the synaptic connections
+proc CreateGeometry() {
+	if (GeometryCreated == 1) {
+		DestroyGeometry()
+	}
+
+	RetinalDivergenceCount = int(abs(RetinalDivergenceCount))
+	RelayConvergenceCount = int(abs(RelayConvergenceCount))
+	RetinalCellCount = int(abs(RetinalCellCount))
+	RelayCellCount = int(abs(RelayCellCount))
+	if (RetinalDivergenceCount < 1) { RetinalDivergenceCount = 1 }
+	if (RetinalDivergenceCount > RetinalDivergenceMax) { RetinalDivergenceCount = RetinalDivergenceMax }
+	if (RelayConvergenceCount < 1) { RelayConvergenceCount = 1 }
+	if (RelayConvergenceCount > RelayConvergenceMax) { RelayConvergenceCount = RelayConvergenceMax }
+	if (RetinalCellCount < 1) { RetinalCellCount = 1 }
+	if (RetinalCellCount > RetinalCellMax) { RetinalCellCount = RetinalCellMax }
+	if (RelayCellCount < 1) { RelayCellCount = 1 }
+	if (RelayCellCount > RelayCellMax) { RelayCellCount = RelayCellMax }
+
+	if (RetinalCellCount * RetinalDivergenceCount != RelayCellCount * RelayConvergenceCount) {
+		printf("Unbalanced geometry! RetinalCellCount (%d) * RetinalDivergenceCount (%d) != RelayCellCount (%d) * RelayConvergenceCount (%d)\n", RetinalCellCount, RetinalDivergenceCount, RelayCellCount, RelayConvergenceCount)
+		
+		if (IgnoreUnbalancedTopology != 1) {
+			quit()
+		}
+	}
+
+	CorticalCell = new PyramidalCell()
+
+	for i = 0, RelayCellCount - 1 {
+		RelayCells[i] = new RelayCell()
+	}
+
+	CorticalCell.Soma Randomizer = new RandomGenerator(0.5)
+	CorticalCell.Soma CorticalNoise = new SynapticNoise(0.5)
+	setpointer CorticalNoise.V, CorticalCell.Soma.v(0.5)
+	setpointer CorticalNoise.InterGeNormRand, Randomizer.NormRand1
+	setpointer CorticalNoise.InterGiNormRand, Randomizer.NormRand2
+	setpointer CorticalNoise.InterGeGiNormRand, Randomizer.NormRand3
+
+	// Retinal cells are created in the cortical soma, but that's just a placeholder
+	for i = 0, RetinalCellCount - 1 {
+		CorticalCell.Soma RetinalCells[i] = new RetinalInput(0.5)
+		setpointer RetinalCells[i].ExpRand1, Randomizer.ExpRand1
+		setpointer RetinalCells[i].ExpRand2, Randomizer.ExpRand2
+		setpointer RetinalCells[i].ExpRand3, Randomizer.ExpRand3
+	}
+
+	for i = 0, RelayCellCount - 1 {
+		RelayCells[i].Soma {
+			for j = 0, RelayConvergenceCount - 1 {
+				RelayAMPA[i][j] = new ConductancePattern(0.5)
+				RelayGABAA[i][j] = new ConductancePattern(0.5)
+			}
+		}
+	}
+
+	DeadlockThreshold = RetinalDivergenceCount * 16
+	DeadlockDetected = 1
+	DeadlockDetectionCount = 0
+
+	objref ConnectivityRandomizer
+	ConnectivityRandomizer = new Random(0)
+	ConnectivityRandomizer.uniform(0, 1)
+
+	// this loop connects the retinal cells to the relay cells in a mixture of convergent and divergent processes (see RetinalDivergenceCount and RelayConvergenceCount)
+	while (DeadlockDetected != 0) { 
+		DeadlockDetected = 0
+
+		if (DeadlockDetectionCount > 0 && IgnoreUnbalancedTopology == 1) {
+			break
+		}
+
+		for i = 0, RetinalCellCount - 1 {
+			for j = 0, RelayConvergenceCount - 1 {
+				RetinogeniculateTopology[i][j] = 0
+			}
+		}
+
+		for i = 0, RelayCellCount - 1 {
+			ResetKVector()
+
+			RelayCells[i].Soma {
+				for j = 0, RelayConvergenceCount - 1 {
+					setpointer RelayAMPA[i][j].V, v(0.5)
+					setpointer RelayGABAA[i][j].V, v(0.5)
+
+					DeadlockSpinCount = 0
+
+					k = int(ConnectivityRandomizer.repick() * (RetinalCellCount - 1) + 0.5)
+
+					while (RetinogeniculateTopology[k][j] >= (RetinalDivergenceCount / RelayConvergenceCount) || FindKvector(k) != 0) {
+						k = int(ConnectivityRandomizer.repick() * (RetinalCellCount - 1) + 0.5)
+						DeadlockSpinCount = DeadlockSpinCount + 1
+						if (DeadlockSpinCount > DeadlockThreshold) {
+							DeadlockDetected = 1
+							DeadlockDetectionCount = DeadlockDetectionCount + 1
+							break
+						}
+					}
+
+					if (DeadlockDetected == 1 && IgnoreUnbalancedTopology == 1) {
+						setpointer RelayAMPA[i][j].Trigger, NullVariable
+						setpointer RelayGABAA[i][j].Trigger, NullVariable
+						break
+					}
+
+					setpointer RelayAMPA[i][j].Trigger, RetinalCells[k].Spike
+					setpointer RelayGABAA[i][j].Trigger, RetinalCells[k].Spike
+					RetinogeniculateTopology[k][j] = RetinogeniculateTopology[k][j] + 1
+					InsertKVector(k)
+				}
+			}
+		}
+	}
+
+	if (DeadlockDetectionCount != 0) {
+		printf("Deadlocks detected! (%d)\n", DeadlockDetectionCount)
+	}
+
+	for i = 0, RelayCellCount - 1 {
+		RelayCells[i].Soma {
+			RelayConstantCurrent[i] = new ConstantCurrent(0.5)
+			RelaySineWaveCurrent[i] = new SineWaveCurrent(0.5)
+			FeedbackNoise[i] = new SynapticNoise(0.5)
+
+			setpointer FeedbackNoise[i].V, v(0.5)
+			setpointer FeedbackNoise[i].InterGeNormRand, Randomizer.NormRand1
+			setpointer FeedbackNoise[i].InterGiNormRand, Randomizer.NormRand2
+			setpointer FeedbackNoise[i].InterGeGiNormRand, Randomizer.NormRand3
+		}
+
+		CorticalAMPA[i] = new ConductancePattern(0.5)
+		CorticalGABAA[i] = new ConductancePattern(0.5)
+
+		setpointer CorticalAMPA[i].V, CorticalCell.Soma.v(0.5)
+		setpointer CorticalAMPA[i].Trigger, RelayCells[i].Soma.v(0.5)
+		setpointer CorticalGABAA[i].V, CorticalCell.Soma.v(0.5)
+		setpointer CorticalGABAA[i].Trigger, RelayCells[i].Soma.v(0.5)
+	}
+
+	GeometryCreated = 1
+}
+
+proc RandomizeRelay() {
+	objref RelayRandomizer
+	RelayRandomizer = new Random(0)
+	RelayRandomizer.uniform(0, 1)
+
+	for i = 0, RelayCellCount - 1 {
+		RelayCells[i].Soma {
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			cm = cm * (1 + r)
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			Ra = Ra * (1 + r)
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			g_pas = g_pas * (1 + r)
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			pcabar_itGHK = pcabar_itGHK * (1 + r)
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			gkbar_hh2 = gkbar_hh2 * (1 + r)
+			r = (RelayRandomizer.repick() - 0.5) * 2 * RelayRandomization
+			gnabar_hh2 = gnabar_hh2 * (1 + r)
+		}
+	}
+}
+
+proc UpdateGeometry() {
+	if (GeometryCreated == 1) {
+		if (RandomizeSeed == 1) {
+			SimulationSeed = int(SeedRandomizer.repick() * 2147483647 + 0.5)
+		}
+
+		Randomizer.Seed = SimulationSeed
+		Randomizer.ResetSeed()
+
+		if (RelayRandomization != 0) {
+			RandomizeRelay()
+		}
+
+		CorticalNoise.Enabled = CorticalNoiseEnabled
+		CorticalNoise.GeRev = CorticalNoiseGeRev
+		CorticalNoise.GeMean = CorticalNoiseGeMean
+		CorticalNoise.GeSigma = CorticalNoiseGeSigma
+		CorticalNoise.GeTau = CorticalNoiseGeTau
+		CorticalNoise.GiRev = CorticalNoiseGiRev
+		CorticalNoise.GiMean = CorticalNoiseGiMean
+		CorticalNoise.GiSigma = CorticalNoiseGiSigma
+		CorticalNoise.GiTau = CorticalNoiseGiTau
+		CorticalNoise.GeGiCorrelation = CorticalNoiseGeGiCorrelation
+		CorticalNoise.GeGiPhase = CorticalNoiseGeGiPhase
+		CorticalNoise.InterCorrelation = CorticalNoiseInterCorrelation
+		CorticalNoise.UpdateParameters()
+
+		for i = 0, RetinalCellCount - 1 {
+			RetinalCells[i].Frequency = RetinalCellFrequency
+			RetinalCells[i].Phase = RetinalCellPhase
+			RetinalCells[i].Noise = RetinalCellNoise
+			RetinalCells[i].Gamma = RetinalCellGamma
+
+			if (i < RetinalCellInterCorrelationCount) {
+				RetinalCells[i].InterCorrelation = RetinalCellInterCorrelation
+			} else {
+				RetinalCells[i].InterCorrelation = 0
+			}
+		}
+
+		for i = 0, RelayCellCount - 1 {
+			RemainingRelayAMPAWeight = RelayAMPAWeight
+			RemainingRelayGABAAWeight = RelayGABAAWeight
+
+			for j = 0, RelayConvergenceCount - 1 {
+				RelayAMPA[i][j].BaseDelay = RetinalCellBaseDelay
+				RelayAMPA[i][j].DelayExpMean = RetinalCellExpDelay
+				RelayAMPA[i][j].DelayExpNoise = 1
+				RelayAMPA[i][j].Weight = RemainingRelayAMPAWeight * RelayWeightSpread
+				RelayAMPA[i][j].Tau = RelayAMPATau
+				RelayAMPA[i][j].ERev = RelayAMPAERev
+				RelayAMPA[i][j].Threshold = 0
+				RelayAMPA[i][j].DeadTime = RelayAMPADeadTime
+				RelayAMPA[i][j].ExpireTime = 10 * RelayAMPATau
+				RelayAMPA[i][j].UpdateParameters()
+
+				RemainingRelayAMPAWeight = RemainingRelayAMPAWeight - RelayAMPA[i][j].Weight
+
+				RelayGABAA[i][j].BaseDelay = RetinalCellBaseDelay + RelayGABAABaseDelay
+				RelayGABAA[i][j].DelayExpMean = RetinalCellExpDelay
+				RelayGABAA[i][j].DelayExpNoise = 1
+				RelayGABAA[i][j].Weight = RemainingRelayGABAAWeight * RelayWeightSpread
+				RelayGABAA[i][j].Tau = RelayGABAATau
+				RelayGABAA[i][j].ERev = RelayGABAAERev
+				RelayGABAA[i][j].Threshold = 0
+				RelayGABAA[i][j].DeadTime = RelayGABAADeadTime
+				RelayGABAA[i][j].ExpireTime = 10 * RelayGABAATau
+				RelayGABAA[i][j].UpdateParameters()
+
+				RemainingRelayGABAAWeight = RemainingRelayGABAAWeight - RelayGABAA[i][j].Weight
+			}
+
+			RelayAMPA[i][j - 1].Weight = RelayAMPA[i][j - 1].Weight + RemainingRelayAMPAWeight
+			RelayGABAA[i][j - 1].Weight = RelayGABAA[i][j - 1].Weight + RemainingRelayGABAAWeight
+
+			CorticalAMPA[i].BaseDelay = RelayCellBaseDelay
+			CorticalAMPA[i].DelayExpMean = RelayCellExpDelay
+			CorticalAMPA[i].DelayExpNoise = 1
+			CorticalAMPA[i].Weight = CorticalAMPAWeight
+			CorticalAMPA[i].Tau = CorticalAMPATau
+			CorticalAMPA[i].ERev = CorticalAMPAERev
+			CorticalAMPA[i].Threshold = 0
+			CorticalAMPA[i].DeadTime = CorticalAMPADeadTime
+			CorticalAMPA[i].ExpireTime = 10 * CorticalAMPATau
+			CorticalAMPA[i].UpdateParameters()
+
+			CorticalGABAA[i].BaseDelay = RelayCellBaseDelay + CorticalGABAABaseDelay
+			CorticalGABAA[i].DelayExpMean = RelayCellExpDelay
+			CorticalGABAA[i].DelayExpNoise = 1
+			CorticalGABAA[i].Weight = CorticalGABAAWeight
+			CorticalGABAA[i].Tau = CorticalGABAATau
+			CorticalGABAA[i].ERev = CorticalGABAAERev
+			CorticalGABAA[i].Threshold = 0
+			CorticalGABAA[i].DeadTime = CorticalGABAADeadTime
+			CorticalGABAA[i].ExpireTime = 10 * CorticalGABAATau
+			CorticalGABAA[i].UpdateParameters()
+
+			RelayConstantCurrent[i].Enabled = RelayConstantCurrentEnabled
+			RelayConstantCurrent[i].Amplitude = RelayConstantCurrentAmplitude
+
+			RelaySineWaveCurrent[i].Enabled = RelaySineWaveCurrentEnabled
+			RelaySineWaveCurrent[i].Amplitude = RelaySineWaveCurrentAmplitude
+			RelaySineWaveCurrent[i].Frequency = RelaySineWaveCurrentFrequency
+			RelaySineWaveCurrent[i].Phase = RelaySineWaveCurrentPhase
+			RelaySineWaveCurrent[i].Offset = RelaySineWaveCurrentOffset
+
+			if (i < RelaySineWaveCurrentInPhaseCount) {
+				RelaySineWaveCurrent[i].Phase = RelaySineWaveCurrentPhase
+			} else {
+				RelaySineWaveCurrent[i].Phase = i * 2 * 3.14159265 / RelayCellCount
+			}
+
+			FeedbackNoise[i].Enabled = FeedbackNoiseEnabled
+			FeedbackNoise[i].GeRev = FeedbackNoiseGeRev
+			FeedbackNoise[i].GeMean = FeedbackNoiseGeMean
+			FeedbackNoise[i].GeSigma = FeedbackNoiseGeSigma
+			FeedbackNoise[i].GeTau = FeedbackNoiseGeTau
+			FeedbackNoise[i].GiRev = FeedbackNoiseGiRev
+			FeedbackNoise[i].GiMean = FeedbackNoiseGiMean
+			FeedbackNoise[i].GiSigma = FeedbackNoiseGiSigma
+			FeedbackNoise[i].GiTau = FeedbackNoiseGiTau
+			FeedbackNoise[i].GeGiCorrelation = FeedbackNoiseGeGiCorrelation
+			FeedbackNoise[i].GeGiPhase = FeedbackNoiseGeGiPhase
+
+			if (i < FeedbackNoiseInterCorrelationCount) {
+				FeedbackNoise[i].InterCorrelation = FeedbackNoiseInterCorrelation
+			} else {
+				FeedbackNoise[i].InterCorrelation = 0
+			}
+
+			FeedbackNoise[i].UpdateParameters()
+		}
+
+		Randomizer.ResetSeed()
+	}
+}
+
+proc UpdateParameters() {
+	if (GeometryCreated == 1) {
+		UpdateGeometry()
+	}
+}
+
+proc GeometryGUI() {
+	xlabel("==============================")
+	xlabel("geometry")
+	xlabel("==============================")
+	xlabel("")
+	xlabel("cells")
+	xpvalue("retinal divergence count", &RetinalDivergenceCount, 1, "CreateGeometry() UpdateParameters() SetupGraph()")	
+	xpvalue("relay convergence count", &RelayConvergenceCount, 1, "CreateGeometry() UpdateParameters() SetupGraph()")
+	xpvalue("retinal cell count", &RetinalCellCount, 1, "CreateGeometry() UpdateParameters() SetupGraph()")
+	xpvalue("relay cell count", &RelayCellCount, 1, "CreateGeometry() UpdateParameters() SetupGraph()")
+	xbutton("create geometry", "CreateGeometry() UpdateParameters() SetupGraph()")
+	xbutton("destroy geometry", "DestroyGeometry() UpdateParameters() SetupGraph()")
+	xlabel("")
+	xlabel("simulation")
+	xpvalue("seed", &SimulationSeed, 1, "UpdateParameters()")
+	xpvalue("random seed?", &RandomizeSeed, 1, "UpdateParameters()")	
+	xlabel("")
+}
+
+proc InputsGUI() {
+	xlabel("==============================")
+	xlabel("inputs")
+	xlabel("==============================")
+	xlabel("")
+	xlabel("retinal cell")
+	xpvalue("frequency (/s)", &RetinalCellFrequency, 1, "UpdateParameters()")
+	xpvalue("phase (ms)", &RetinalCellPhase, 1, "UpdateParameters()")
+	xpvalue("noise", &RetinalCellNoise, 1, "UpdateParameters()")
+	xpvalue("gamma", &RetinalCellGamma, 1, "UpdateParameters()")
+	xpvalue("inter-correlation", &RetinalCellInterCorrelation, 1, "UpdateParameters()")
+	xpvalue("inter-correlation count", &RetinalCellInterCorrelationCount, 1, "UpdateParameters()")
+	xpvalue("exponential delay", &RetinalCellExpDelay, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("relay ampa synapses")
+	xpvalue("weight (nS)", &RelayAMPAWeight, 1, "UpdateParameters()")
+	xpvalue("tau max (mS)", &RelayAMPATau, 1, "UpdateParameters()")
+	xpvalue("erev (mV)", &RelayAMPAERev, 1, "UpdateParameters()")
+	xpvalue("deadtime (mS)", &RelayAMPADeadTime, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("relay gabaa synapses")
+	xpvalue("base delay (mS)", &RelayGABAABaseDelay, 1, "UpdateParameters()")
+	xpvalue("weight (nS)", &RelayGABAAWeight, 1, "UpdateParameters()")
+	xpvalue("tau max (mS)", &RelayGABAATau, 1, "UpdateParameters()")
+	xpvalue("erev (mV)", &RelayGABAAERev, 1, "UpdateParameters()")
+	xpvalue("deadtime (mS)", &RelayGABAADeadTime, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("relay ampa+gabaa synapses")
+	xpvalue("weight spread", &RelayWeightSpread, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("cortical ampa synapses")
+	xpvalue("weight (nS)", &CorticalAMPAWeight, 1, "UpdateParameters()")
+	xpvalue("tau max (mS)", &CorticalAMPATau, 1, "UpdateParameters()")
+	xpvalue("erev (mV)", &CorticalAMPAERev, 1, "UpdateParameters()")
+	xpvalue("deadtime (mS)", &CorticalAMPADeadTime, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("cortical gabaa synapses")
+	xpvalue("base delay (mS)", &CorticalGABAABaseDelay, 1, "UpdateParameters()")
+	xpvalue("weight (nS)", &CorticalGABAAWeight, 1, "UpdateParameters()")
+	xpvalue("tau max (mS)", &CorticalGABAATau, 1, "UpdateParameters()")
+	xpvalue("erev (mV)", &CorticalGABAAERev, 1, "UpdateParameters()")
+	xpvalue("deadtime (mS)", &CorticalGABAADeadTime, 1, "UpdateParameters()")
+	xlabel("")
+}
+
+proc NoiseGUI() {
+	xlabel("==============================")
+	xlabel("noise")
+	xlabel("==============================")
+	xlabel("")
+	xlabel("constant current")
+	xcheckbox("enabled", &RelayConstantCurrentEnabled, "UpdateParameters()")
+	xpvalue("amplitude (nA)", &RelayConstantCurrentAmplitude, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("sine-wave current")
+	xcheckbox("enabled", &RelaySineWaveCurrentEnabled, "UpdateParameters()")
+	xpvalue("amplitude (nA)", &RelaySineWaveCurrentAmplitude, 1, "UpdateParameters()")
+	xpvalue("frequency (Hz)", &RelaySineWaveCurrentFrequency, 1, "UpdateParameters()")
+	xpvalue("phase", &RelaySineWaveCurrentPhase, 1, "UpdateParameters()")
+	xpvalue("offset (nA)", &RelaySineWaveCurrentOffset, 1, "UpdateParameters()")
+	xpvalue("in phase count", &RelaySineWaveCurrentInPhaseCount, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("feedback noise")
+	xcheckbox("enabled", &FeedbackNoiseEnabled, "UpdateParameters()")
+	xpvalue("ge rev (mV)", &FeedbackNoiseGeRev, 1, "UpdateParameters()")
+	xpvalue("ge mean (nS)", &FeedbackNoiseGeMean, 1, "UpdateParameters()")
+	xpvalue("ge sigma (nS)", &FeedbackNoiseGeSigma, 1, "UpdateParameters()")
+	xpvalue("ge tau (ms)", &FeedbackNoiseGeTau, 1, "UpdateParameters()")
+	xpvalue("gi rev (mV)", &FeedbackNoiseGiRev, 1, "UpdateParameters()")
+	xpvalue("gi mean (nS)", &FeedbackNoiseGiMean, 1, "UpdateParameters()")
+	xpvalue("gi sigma (nS)", &FeedbackNoiseGiSigma, 1, "UpdateParameters()")
+	xpvalue("gi tau (ms)", &FeedbackNoiseGiTau, 1, "UpdateParameters()")
+	xpvalue("ge / gi correlation", &FeedbackNoiseGeGiCorrelation, 1, "UpdateParameters()")
+	xpvalue("ge / gi phase (ms)", &FeedbackNoiseGeGiPhase, 1, "UpdateParameters()")
+	xpvalue("inter-correlation", &FeedbackNoiseInterCorrelation, 1, "UpdateParameters()")
+	xlabel("")
+	xlabel("cortical noise")
+	xcheckbox("enabled", &CorticalNoiseEnabled, "UpdateParameters()")
+	xpvalue("ge rev (mV)", &CorticalNoiseGeRev, 1, "UpdateParameters()")
+	xpvalue("ge mean (nS)", &CorticalNoiseGeMean, 1, "UpdateParameters()")
+	xpvalue("ge sigma (nS)", &CorticalNoiseGeSigma, 1, "UpdateParameters()")
+	xpvalue("ge tau (ms)", &CorticalNoiseGeTau, 1, "UpdateParameters()")
+	xpvalue("gi rev (mV)", &CorticalNoiseGiRev, 1, "UpdateParameters()")
+	xpvalue("gi mean (nS)", &CorticalNoiseGiMean, 1, "UpdateParameters()")
+	xpvalue("gi sigma (nS)", &CorticalNoiseGiSigma, 1, "UpdateParameters()")
+	xpvalue("gi tau (ms)", &CorticalNoiseGiTau, 1, "UpdateParameters()")
+	xpvalue("ge / gi correlation", &CorticalNoiseGeGiCorrelation, 1, "UpdateParameters()")
+	xpvalue("ge / gi phase (ms)", &CorticalNoiseGeGiPhase, 1, "UpdateParameters()")
+	xpvalue("inter-correlation", &CorticalNoiseInterCorrelation, 1, "UpdateParameters()")
+	xlabel("")
+}

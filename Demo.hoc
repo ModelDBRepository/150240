@@ -1,0 +1,143 @@
+//
+// Demo.hoc - Main file for demo mode
+//
+// Sets a basic retino-thalamo-cortical circuit
+// and adds conductance and voltage graphs.
+//
+// Topology: 1 retinal cell diverging to 30 relay cells, re-converging to 1 cortical cell
+//
+// The demo will first show activity traces for an optimal regime (uncorrelated synaptic noise in TC cells).
+// After 1s, correlation of the synaptic noise across TC cells will be switched from 0% to 99%.
+//
+// Voltage graph
+// =============
+// Blue trace: cortical Vm
+// Black traces: TC cell Vms (10 out of 30)
+// Red spikes: retinal input spike-train (common to all TC cells)
+//
+// Conductance graph
+// =================
+// Green and red traces: synaptic noise for 1 TC cell (excitatory and inhibitory components, respectively)
+// Brown: retinothalamic AMPA synaptic conductance patterns (shown for 1 TC cell)
+// Orange: thalamocortical AMPA synaptic conductance patterns (shown for 1 TC cell)
+//
+// Thalamocortical convergence studies
+// Sébastien Béhuret, UNIC/CNRS Paris, 2013
+//
+
+// Retinothalamic topology
+// Relay cells will alway converge to the cortical cell (this is hardcoded in Geometry.hoc)
+RetinalDivergenceCount = 30
+RelayConvergenceCount = 1
+RetinalCellCount = 1
+RelayCellCount = 30
+RelayAMPAWeight = 12.5 // nS
+
+// Another example: 15 retinal cells, each diverging to 4 distinct relay cells, and 30 relay cells, each being connected by 2 distinct retinal cells
+// TC retinal input (RelayAMPAWeight) is spread in the two synapses of each TC cell (0.75*RelayAMPAWeight in one synapse and 0.25*RelayAMPAWeight in the other synapse) 
+//RetinalDivergenceCount = 4
+//RelayConvergenceCount = 2
+//RetinalCellCount = 15
+//RelayCellCount = 30
+//RelayWeightSpread = 0.75
+//RelayAMPAWeight = 12.5
+
+// Retinal stimulation: 30 Hz / Gamma 3 (see Geometry.hoc)
+RetinalCellFrequency = 30
+
+// TC cells with independent (uncorrelated) synaptic noise input
+// This is an optimal regime
+FeedbackNoiseEnabled = 1
+FeedbackNoiseInterCorrelation = 0
+TC_Grest = 8.34 // nS
+TC_Vrest = -74.31 // mV
+TC_Gexc = 1.5 // excitatory conductance mean amplitude
+TC_Ginh = 1 // inhibitory conductance mean amplitude
+TC_Sexc = 0.2 // excitatory conductance variation ratio
+TC_Sinh = 0.2 // inhibitory conductance variation ratio
+
+// Cortical cell (no synaptic noise)
+CorticalAMPAWeight = 7 * 30 / RelayCellCount // optimal rule: 7 nS for 30 TC cells and 2.33 nS for 90 TC cells
+CorticalNoiseEnabled = 0
+C_Grest = 33.4 // nS
+C_Vrest = -70.57 // mV
+C_Gexc = 0
+C_Ginh = 0
+C_Sexc = 0
+C_Sinh = 0
+
+// Translating the above parameters to synaptic noise conductance mean and SD used in Geometry.hoc
+FeedbackNoiseGeMean = TC_Grest * TC_Gexc
+FeedbackNoiseGeSigma = FeedbackNoiseGeMean * TC_Sexc
+FeedbackNoiseGiMean = TC_Grest * TC_Ginh
+FeedbackNoiseGiSigma = FeedbackNoiseGiMean * TC_Sinh
+CorticalNoiseGeMean = C_Grest * C_Gexc
+CorticalNoiseGeSigma = CorticalNoiseGeMean * C_Sexc
+CorticalNoiseGiMean = C_Grest * C_Ginh
+CorticalNoiseGiSigma = CorticalNoiseGiMean * C_Sinh
+
+// We are done; other parameters are already set in Geometry.hoc
+CreateGeometry()
+UpdateParameters()
+
+objref ConductanceGraph, VoltageGraph
+
+// some (fancy) graphs
+objref ConductanceGraph, CorticalCellGraph, VoltageGraph, CustomGraph
+
+{ ConductanceGraph = new Graph()
+ConductanceGraph.size(tstart, 3000, 25, 0)
+ConductanceGraph.xaxis()
+ConductanceGraph.yaxis()
+ConductanceGraph.addvar("FeedbackNoise[0] (nS)", "FeedbackNoise[0].Ge", 4, 1)
+ConductanceGraph.addvar("FeedbackNoise[0] (nS)", "FeedbackNoise[0].Gi", 2, 1)
+ConductanceGraph.addvar("RelayAMPA[0][0] (nS)", "RelayAMPA[0][0].G", 6, 1)
+ConductanceGraph.addvar("CorticalAMPA[0] (nS)", "CorticalAMPA[0].G", 5, 1)
+ConductanceGraph.save_name("ConductanceGraph")
+graphList[0].append(ConductanceGraph)
+
+VoltageGraph = new Graph()
+VoltageGraph.size(tstart, 3000, 60, -80)
+VoltageGraph.xaxis()
+VoltageGraph.yaxis()
+VoltageGraph.addvar("RelayCells[0] (mV)", "RelayCells[0].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[1] (mV)", "RelayCells[1].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[2] (mV)", "RelayCells[2].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[3] (mV)", "RelayCells[3].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[4] (mV)", "RelayCells[4].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[5] (mV)", "RelayCells[5].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[6] (mV)", "RelayCells[6].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[7] (mV)", "RelayCells[7].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[8] (mV)", "RelayCells[8].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("RelayCells[9] (mV)", "RelayCells[9].Soma.v(0.5)", 1, 5)
+VoltageGraph.addvar("CorticalCell (mV)", "CorticalCell.Soma.v(0.5)", 3, 2)
+VoltageGraph.addvar("RetinalCells[0]", "RetinalCells[0].Spike10", 2, 2)
+VoltageGraph.save_name("VoltageGraph")
+graphList[0].append(VoltageGraph) }
+
+
+// NEURON parameters
+steps_per_ms = 10
+dt = 0.1	
+tstart = 0
+v_init = -70
+celsius = 34.5
+
+// First 1s: optimal regime
+tstop = 1000
+runStopAt = tstop
+{printf("===================================================\n")}
+{printf("0s - 1s: optimal activity regime\n")}
+
+run()
+
+// Next 2s: correlated regime
+tstop = 3000
+runStopAt = tstop
+FeedbackNoiseInterCorrelation = 0.99
+UpdateParameters()
+{printf("1s - 3s: synaptic noise correlation switched to 99%\n")}
+{printf("===================================================\n")}
+
+continuerun(tstop)
+stoprun=1
