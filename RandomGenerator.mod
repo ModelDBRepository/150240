@@ -36,7 +36,7 @@ ASSIGNED
 
 INITIAL
 {
-	ResetSeed(Seed)
+	ResetSeed()
 	GenerateRandomNumbers()
 }
 
